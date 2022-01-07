@@ -29,21 +29,26 @@ def genLiqRangeOverTime(df,savefile='',tickwindow=60):
 
 
 
-def calcdollarliq(dfrgn,tickwindow=60):
+def calcdollarliq(dfrgn,tickwindow=60,alt=0):
     # convert liquidity amount to dollar liquidity amount
     dfrgn=dfrgn.assign(pa=lambda x: 1.0001**x.tickLower)
     dfrgn=dfrgn.assign(pb=lambda x: 1.0001**(x.tickLower+tickwindow))
-    dfrgn=dfrgn.assign(x=lambda x: x.amount*(x.pb**0.5-x.pa**0.5)/((x.pa*x.pb)**0.5))
+    # dfrgn=dfrgn.assign(x=lambda x: x.amount*(x.pb**0.5-x.pa**0.5)/((x.pa*x.pb)**0.5))
+    dfrgn['p']=1/dfrgn.P*1e12
 
-    dfrgn.loc[dfrgn.P <= dfrgn.pa,'x']=dfrgn.amount*(dfrgn.pb**0.5-dfrgn.pa**0.5)/((dfrgn.pa*dfrgn.pb)**0.5)/1e6
-    dfrgn.loc[(dfrgn.pa<dfrgn.P) & (dfrgn.P<dfrgn.pb),'x']=dfrgn.amount*(dfrgn.pb**0.5-dfrgn.P**0.5)/((dfrgn.P*dfrgn.pb)**0.5)/1e6
-    dfrgn.loc[dfrgn.P>=dfrgn.pb,'x']=0
+    dfrgn.loc[dfrgn.p <= dfrgn.pa,'x']=dfrgn.amount*(dfrgn.pb**0.5-dfrgn.pa**0.5)/((dfrgn.pa*dfrgn.pb)**0.5)/1e6
+    dfrgn.loc[(dfrgn.pa<dfrgn.p) & (dfrgn.p<dfrgn.pb),'x']=dfrgn.amount*(dfrgn.pb**0.5-dfrgn.p**0.5)/((dfrgn.p*dfrgn.pb)**0.5)/1e6
+    dfrgn.loc[dfrgn.p>=dfrgn.pb,'x']=0
 
-    dfrgn.loc[dfrgn.P <= dfrgn.pa,'y']=0
-    dfrgn.loc[(dfrgn.pa<dfrgn.P) & (dfrgn.P<dfrgn.pb),'y']=dfrgn.amount*(dfrgn.P**0.5-dfrgn.pa**0.5)/1e18
-    dfrgn.loc[dfrgn.P>=dfrgn.pb,'y']=dfrgn.amount*(dfrgn.pb**0.5-dfrgn.pa**0.5)/1e18
+    dfrgn.loc[dfrgn.p <= dfrgn.pa,'y']=0
+    dfrgn.loc[(dfrgn.pa<dfrgn.p) & (dfrgn.p<dfrgn.pb),'y']=dfrgn.amount*(dfrgn.p**0.5-dfrgn.pa**0.5)/1e18
+    dfrgn.loc[dfrgn.p>=dfrgn.pb,'y']=dfrgn.amount*(dfrgn.pb**0.5-dfrgn.pa**0.5)/1e18
 
-    dfrgn['liqusd']=1*dfrgn.x+dfrgn.P*dfrgn.y
+    # convert liquidity using price at lower tick 
+    dfrgn['liqusd']=1*dfrgn.x+dfrgn.price*dfrgn.y
+    if alt:
+        # note that here P is the current price rather than the price at each tick
+        dfrgn['liqusd']=1*dfrgn.x+dfrgn.P*dfrgn.y
     return dfrgn
 
 
@@ -121,7 +126,6 @@ def CalcAll(filein='../data/mintburn_usdceth3000_simple.csv', fileprice='../data
     dfprice['date']=pd.to_datetime(dfprice.date).dt.date
 
     df=pd.read_csv(filein)
-    # df=pd.read_csv('data/mintburn_usdceth500.csv')
     df['amount']=df.amount.map(float)
     df=df.rename(columns={'lowertick':'tickLower','uppertick':'tickUpper'})
     df['date']=pd.to_datetime(df.call_block_time).dt.date
