@@ -4,8 +4,10 @@ This project calculates current and historical market depth at all levels from a
 
 
 Data requirement:
- - Dune Analytics: to obtain all mint and burn events for each pool (mintburn_dune.sql); this can possibly be replaced with subgraph data (?)
- - Kaiko API: to obtain centralized exchange market depth
+ - Bigquery/Dune Analytics: to obtain all mint and burn events for each pool
+ - Coinpaprika API: to get historical price
+ - Kaiko API (optional): to obtain centralized exchange market depth
+
 
 
 Files:
