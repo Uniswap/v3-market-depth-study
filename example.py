@@ -96,7 +96,35 @@ dfm2=dpu2.genLiqRangeXNumeraire(dfm,tickspacing=ts,decimals0=decimals0,decimals1
 liqsumbydate=dfm2.groupby(['date','block_number']).agg({'x':sum,'y':sum,'liqX':sum,'amount':sum})
 
 bn=liqsumbydate.reset_index().block_number.max(); bn
-liqsumbydate.tail(5)
+
+dfm2.loc[dfm2.block_number==14260474].sum().amount
+
+
+int(np.floor(197484/60)*60)
+dfm2.loc[(dfm2.block_number==14260474) & (dfm2.tickLower==int(np.floor(197484/60)*60))]
+
+reload(dpu2)
+tmpdf=dfm2.loc[(dfm2.block_number==14260474) & (dfm2.tickLower==int(np.floor(197484/60)*60))]
+tmpdf.p.values[0]
+1/2653.3792
+1.0001**197484
+dpu2.calc_liquidity_at_tick(i=197460,din=tmpdf,p=1.0001**197484)/1e6
+
+i0=197484
+delta=-0.00242
+d=int(np.log((delta+1)*1.0001**i0)/(np.log(1.0001))-i0)
+d
+
+np.arange(i0,i0+d,np.sign(d))
+
+dpu2.calc_market_depth(df=dfm2.loc[(dfm2.block_number==14260474)],i0=197484,delta=-0.002397002598245934,plusminus=False,logdelta=False,diagnosis=True)
+dpu2.calc_market_depth(df=dfm2.loc[(dfm2.block_number==14260474)],i0=197484,delta=0.00360630714589405,plusminus=False,logdelta=False,diagnosis=True)
+
+1057296.5413859035+725003.3426646198
+24+35
+60*30208.233333333334
+
+
 import subgraph
 reload(subgraph)
 

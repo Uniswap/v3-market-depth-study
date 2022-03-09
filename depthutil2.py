@@ -99,7 +99,7 @@ def calc_liquidity_at_tick(i,din, s=60, p=np.nan):
     li=lambjs/s
     return li
 
-def calc_market_depth(df,i0=198120,delta=0.02,ts=60,plusminus=True,logdelta=False,diagnosis=False,decimals0=1e6):
+def calc_market_depth(df,i0=198120,delta=0.02,ts=60,plusminus=True,logdelta=False,diagnosis=False,decimals0=6):
     # ' returns market depth given a dataframe with columns 'tickLower', 'amount' and current tick i0,
     # df has a mapping between tick and liqudity in raw form and current price p
     if logdelta:
@@ -115,17 +115,18 @@ def calc_market_depth(df,i0=198120,delta=0.02,ts=60,plusminus=True,logdelta=Fals
     # dataframe to dict and price to scalar for faster processing
     din=dict(df.set_index('tickLower').amount)
     # subset to list of ticks that have values
-    r=np.array([int(i) for i in r if i in din.keys()])
+    # r=np.array([int(i) for i in r if i in din.keys()])
 
 #     p=df.p.values[0]
     p=1.0001**i0
     if(diagnosis):
         # returns liquidity at each tick spacing
         lis=list()
+        print('d',d)
         print('min',min(r))
         print('max',max(r))
         for i in r:
-            lis.append(calc_liquidity_at_tick(i,din=din,s=ts,p=p)/decimals0)
+            lis.append(calc_liquidity_at_tick(i,din=din,s=ts,p=p)/(10**decimals0))
         m=sum(lis)
         print(d*2)
         print(len(lis))
@@ -135,9 +136,9 @@ def calc_market_depth(df,i0=198120,delta=0.02,ts=60,plusminus=True,logdelta=Fals
         m=0
         for i in r:
             m+=calc_liquidity_at_tick(i,din=din,s=ts,p=p)
-        return m/decimals0
+        return m/(10**(decimals0))
 
-def genMarketDepth(dfm,delta=0.02,ts=60,plusminus=True,logdelta=True,decimals0=1e6):
+def genMarketDepth(dfm,delta=0.02,ts=60,plusminus=True,logdelta=True,decimals0=6):
     # generate time series of market depth for specific delta
     # dfm contains columns "block_number", 'tickLower', 'amount', 'currenttick' (for tick associated with current price)
     blockN=dfm.block_number.unique()
