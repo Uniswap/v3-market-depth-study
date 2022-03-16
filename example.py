@@ -16,22 +16,24 @@ reload(dpu2)
 # fileprice = "data/ethprice_latest.csv"
 # depthpct=0.02
 address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8'
-# address='0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640'
-# address='0x5777d92f208679db4b9778590fa3cab3ac9e2168' # usdc dai
+address='0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640'
+address='0x4e68ccd3e89f51c3074ca5072bbac773960dfa36'
+address='0x5777d92f208679db4b9778590fa3cab3ac9e2168' # usdc dai
 # address='0xcbcdf9626bc03e24f779434178a73a0b4bad62ed' #btc-eth
 # address='0x99ac8ca7087fa4a2a1fb6357269965a2014abc35' #btc-eth
 
 reload(dpu2)
 # pipeline for entire process
-md=dpu2.pipeMarketDepth(address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8',pctchg=[-.02,.02])
+md=dpu2.pipeMarketDepth(address=address,pctchg=[.0001])
 
 
 md.groupby('date').sum().marketdepth.plot()
 
 
-
-
-
+aa=md.groupby('date').sum()
+aa.head(10)
+2137.274582/0.000270
+aa.tail()
 
 # 2% +- depth
 # CEX ETH USDX
@@ -68,7 +70,7 @@ dfprice=pd.read_csv(fileprice)[['bn','token0Price','tick']].rename(columns={'bn'
 
 dfprice.plot('block_number','price')
 
-
+dfprice.head(10)
 # reduce size of range if 1tick spacing
 if(ts==1):
     df=dpu2.LimitTickRange(df,dfprice,nstd=5).copy()
@@ -95,11 +97,12 @@ dfm2=dpu2.genLiqRangeXNumeraire(dfm,tickspacing=ts,decimals0=decimals0,decimals1
 
 liqsumbydate=dfm2.groupby(['date','block_number']).agg({'x':sum,'y':sum,'liqX':sum,'amount':sum})
 
-bn=liqsumbydate.reset_index().block_number.max(); bn
 
-dfm2.loc[dfm2.block_number==14260474].sum().amount
-
-
+liqsumbydate.reset_index().block_number.head(10)
+bn=liqsumbydate.reset_index().block_number.min(); bn
+dfm2.loc[dfm2.block_number==bn].liqX.sum()
+dfm2.loc[(dfm2.block_number==bn) & (dfm2.tickLower>150000) & (dfm2.tickLower<250000)].plot('tickLower','liqX')
+dfm2.loc[dfm2.block_number==12377369]
 int(np.floor(197484/60)*60)
 dfm2.loc[(dfm2.block_number==14260474) & (dfm2.tickLower==int(np.floor(197484/60)*60))]
 

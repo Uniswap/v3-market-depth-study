@@ -79,7 +79,7 @@ def calc_liquidity_at_tick(i,din, s=60, p=np.nan):
             print(i)
             print(j)
             print(din)
-        #     return 0
+            return 0
     else:
         Ljs=din.loc[din.tickLower==j,'amount'].values[0]
     if (math.isnan(p)):

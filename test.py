@@ -15,7 +15,7 @@ reload(dpu2)
 
 
 # Setup
-address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8'
+address='0x11b815efb8f581194ae79006d24e0d814b7697f6'
 filein = 'data/mintburnall_bigquery.csv'
 poolstats=graphql_getpoolstat.subgraph_getpoolstats(address)
 decimals0=int(poolstats['token0']['decimals'])
@@ -46,6 +46,7 @@ dfm=pd.merge(dfl,dfprice,on='block_number',how='left').dropna()
 dfm2=dpu2.genLiqRangeXNumeraire(dfm,tickspacing=ts,decimals0=decimals0,decimals1=decimals1,pricemode=0)
 
 import pytest
+
 
 # test 1:
 # Liquidity for pool '0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8' adds up to 1.600162726770379e+21 at block_number 14260474
@@ -85,7 +86,7 @@ i00/(1e12/1.0001**(197460+60))-1
 # there should be exactly 60 tics
 # should current price be provided by p or 1.0001**currenttick? does it matter empirically?
 
-
+dfm2.tail(5)
 d1,diag1=dpu2.calc_market_depth(df=dfm2.loc[(dfm2.block_number==14260474)],i0=197484,delta=-0.002397002598245934,plusminus=False,logdelta=False,diagnosis=True)
 d2,diag2=dpu2.calc_market_depth(df=dfm2.loc[(dfm2.block_number==14260474)],i0=197484,delta=0.00360630714589405,plusminus=False,logdelta=False,diagnosis=True)
 
@@ -97,3 +98,37 @@ print(len(diag1)+len(diag2))
 # note that current tick is included twice
 print(diag1)
 print(diag2)
+
+
+2187.5
+# mkt depth for 2%
+md=dpu2.pipeMarketDepth(address='0x11b815efb8f581194ae79006d24e0d814b7697f6',pctchg=[.02])
+md.block_number.unique()
+# 6210937
+md
+md.plot('date','marketdepth')
+import sqlite3
+
+con= sqlite3.connect('marketdepth.db')
+
+df2=pd.read_sql_query('select * from market_depth',con)
+
+df2
+
+df2.loc[df2.twoPctInd==1]
+1e12/3.823607e+08
+df2.loc[(df2.twoPctInd==1) & (df2.priceImpact>1)]
+df2['p']=1e12/df2.curPrice
+df3=df2.loc[(df2.twoPctInd==1) & (df2.priceImpact<1)].groupby('block').tail(1)
+df3['depth']=df3.token0In
+# df3['depth']=np.array(map(float,df3.token1Out))
+# df3['depth']=df3['depth']
+df4=pd.merge(md.loc[md.pct>0],df3[['block','depth']],left_on='block_number',right_on='block')
+df4.set_index('date')[['marketdepth','depth']].plot()
+df4['ratio']=df4.marketdepth/df4.depth
+df4.set_index('date')[['ratio']].plot()
+
+
+
+df=pd.read_csv('data/ETHUSDT-trades-2022-03-14.csv',names=['tradeId','price','qty','quoteQty','time','isBuyerMaker','isBestMatch'])
+df.describe()

@@ -17,6 +17,7 @@ def subgraph_pull(pool0x="0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8",block_numb
     ) {
         tick
         token0Price
+        token1Price
       }
     }
     ''' % (pool0x,block_number)
