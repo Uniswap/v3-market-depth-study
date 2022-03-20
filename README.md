@@ -1,10 +1,11 @@
 
 
-This project calculates current and historical market depth at all levels from any Uniswap V3 liquidity pools and preform comparison against centralized exchange market depths.
+This project calculates current and historical market depth from Uniswap V3 liquidity pools and preform comparison against centralized exchange market depths.
 
 
 Data requirement:
  - Bigquery/Dune Analytics: to obtain all mint and burn events for each pool
+ - Subgraph: to obtain block-level price data for pools
  - Coinpaprika API (optional): to get historical price externally
  - Kaiko API (optional): to obtain centralized exchange market depth
 
