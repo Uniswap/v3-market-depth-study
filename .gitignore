@@ -1,0 +1,15 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+/data/**
+*.gz
+*.pkl
+*.pyc
+*.xml
+*.csv
+*.tar
+*.db
+*.pdf
+*.png
+.ipynb_checkpoints/*
+.idea/

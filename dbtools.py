@@ -14,3 +14,16 @@ def getpricefromswap(address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8',decima
     df=df.sort_values('block_number')
     df=df.set_index('block_number')
     return df
+
+
+def getpoolstats(poolid):
+    #' return token0, token1, decimals0, decimals1, tickspacing, feetier
+    #' call bigquery: `bigquery-public-data.crypto_ethereum.tokens` join with `mimetic-design-338620.uniswap.V3Factory_PoolCreated`
+    return
+
+
+def getpriceatblocknumber(address, block_numbers=[]):
+    #' get price of a pair specificed by liquidity pool address at specified block_numbers
+    #' Use pandas merge_asof to get to the price asof prespecified block_numbers
+    #' Utilize getpricefromswap and getpoolstats
+    return
