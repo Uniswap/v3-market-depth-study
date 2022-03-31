@@ -13,3 +13,5 @@
 *.png
 .ipynb_checkpoints/*
 .idea/
+!tracked_pools.csv
+/sql/*
