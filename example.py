@@ -9,7 +9,6 @@ from importlib import reload
 from depthutil2 import *
 import graphql_getpoolstat
 
-
 # fileprice = "data/ethprice_latest.csv"
 # depthpct=0.02
 address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8'
@@ -20,7 +19,9 @@ address='0x07f3d316630719f4fc69c152f397c150f0831071' # eurt usdt
 # address='0xcbcdf9626bc03e24f779434178a73a0b4bad62ed' #btc-eth
 # address='0x99ac8ca7087fa4a2a1fb6357269965a2014abc35' #btc-eth
 
-md=pipeMarketDepth(address=address,pctchg=[-.02,.02])
+
+
+md=pipeMarketDepth(address=address,pctchg=[-.02,.02],UseSubgraph=False)
 
 md.loc[md.pct==.02].plot('date','marketdepth')
 
@@ -28,7 +29,6 @@ md.loc[md.pct==.001].plot('date','marketdepth')
 
 md.groupby('date').sum().marketdepth.plot()
 
-#
 # # 2% +- depth
 # # CEX ETH USDX
 # # V3 ETH USDX

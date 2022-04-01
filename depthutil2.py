@@ -201,14 +201,27 @@ def genLiqRangeXNumeraire(dfrgn, tickspacing=60,decimals0=6,decimals1=18,pricemo
     dfrgn["liqX"] = 1 * dfrgn.x + dfrgn.price * dfrgn.y
     return dfrgn
 
-def pipeMarketDepth(filein = 'data/mintburnall_bigquery.csv',address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8',pctchg=[-.05, -.02, .02, .05]):
-    poolstats=graphql_getpoolstat.subgraph_getpoolstats(address)
-    decimals0=int(poolstats['token0']['decimals'])
-    decimals1=int(poolstats['token1']['decimals'])
-    symbol0=poolstats['token0']['symbol']
-    symbol1=poolstats['token1']['symbol']
-    feeTier=int(poolstats['feeTier'])
-    ts=feetier2tickspacing(feeTier)
+def pipeMarketDepth(filein = 'data/mintburnall_bigquery.csv',address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8',pctchg=[-.05, -.02, .02, .05], UseSubgraph=True):
+    #' create market depth from mintburn file (from either dune or gcpbigquery) given address, pctchg
+    #' queries either subgraph or gcpbigquery for historical pricees
+    if UseSubgraph:
+        poolstats=graphql_getpoolstat.subgraph_getpoolstats(address)
+        decimals0=int(poolstats['token0']['decimals'])
+        decimals1=int(poolstats['token1']['decimals'])
+        symbol0=poolstats['token0']['symbol']
+        symbol1=poolstats['token1']['symbol']
+        feeTier=int(poolstats['feeTier'])
+        ts=feetier2tickspacing(feeTier)
+    else:
+        # use internal server (non-public)
+        import dbtools
+        poolstats=dbtools.getpoolstats(address)
+        decimals0=int(poolstats['decimals0'])
+        decimals1=int(poolstats['decimals1'])
+        symbol0=poolstats['token0symbol']
+        symbol1=poolstats['token1symbol']
+        feeTier=int(poolstats['fee'])
+        ts=int(poolstats['tickSpacing'])
     print(symbol0,decimals0, symbol1, decimals1,feeTier,ts)
 
     df = pd.read_csv(filein, dtype={'amount': float, 'amount0': float, 'amount1': float})
@@ -217,15 +230,18 @@ def pipeMarketDepth(filein = 'data/mintburnall_bigquery.csv',address='0x8ad599c3
     df["date"] = pd.to_datetime(df.block_timestamp).dt.date
     df=df.sort_values('block_number')
 
+    bndate=df.loc[df.amount!=0].groupby('date').block_number.last()
 
-    fileprice='tickprice_%s.csv' % address
-    if (not(os.path.exists(fileprice))):
-        print('getting prices:')
-        bndate=df.loc[df.amount!=0].groupby('date').block_number.last()
-        bndate.to_csv('tmp_bndate.csv')
-        os.system('python3.9 graphql_getprice.py %s %s' % (address,'tmp_bndate.csv'))
-
-    dfprice=pd.read_csv(fileprice)[['bn','token0Price','tick']].rename(columns={'bn':'block_number','token0Price':'price','tick':'currenttick'})
+    if UseSubgraph:
+        fileprice='tickprice_%s.csv' % address
+        if (not(os.path.exists(fileprice))):
+            print('getting prices:')
+            bndate.to_csv('tmp_bndate.csv')
+            os.system('python3.9 graphql_getprice.py %s %s' % (address,'tmp_bndate.csv'))
+        dfprice=pd.read_csv(fileprice)[['bn','token0Price','tick']].rename(columns={'bn':'block_number','token0Price':'price','tick':'currenttick'})
+    else:
+        # use internal server (non-public)
+        dfprice=dbtools.getpriceatblocknumber(address=address,block_numbers=bndate.values).rename(columns={'tick':'currenttick'})[['block_number','price','currenttick']]
 
 
     # reduce size of range if 1tick spacing
@@ -240,7 +256,6 @@ def pipeMarketDepth(filein = 'data/mintburnall_bigquery.csv',address='0x8ad599c3
     dfl['date']=dfl.block_timestamp.dt.date
 
     dfm=pd.merge(dfl,dfprice,on='block_number',how='left').dropna()
-
 
     tmplist=list()
     for pc in tqdm(pctchg):
