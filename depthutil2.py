@@ -11,8 +11,8 @@ def _genLiqRange(df,ts=60,getblocks=[]):
     if(type(getblocks)!=list):
         getblocks=list(getblocks)
 
-    tmin=dft.tickLower.min()
-    tmax=dft.tickUpper.max()
+    tmin=int(dft.tickLower.min())
+    tmax=int(dft.tickUpper.max())
     Nt=int((tmax-tmin)/ts)
 
     blockN=dft.block_number.values

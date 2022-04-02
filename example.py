@@ -17,7 +17,7 @@ if loadmintburns:
     #' Load mint burn history from internal server or run dune mintburn_dune.sql
     from dbtools import *
     df=bigquery("select * from uniswap.MintBurn where amount!=0")
-    df.to_csv('data/mintburn.csv')
+    df.to_csv('data/mintburnall_bigquery.csv')
 
 # Generate Market Depth at +- 2%
 md=pipeMarketDepth(filein = 'data/mintburnall_bigquery.csv', address=address,pctchg=[-.02,.02],UseSubgraph=True)
