@@ -24,7 +24,7 @@ for i in tqdm(range(len(pools))):
             md['address']=address
             poolstats=db.getpoolstats(address)
             md['unit_token0']=poolstats['token0symbol']
-            pd.io.gbq.to_gbq(md, DB_OUT,if_exists='append')
+            pd.io.gbq.to_gbq(md, DB_OUT,project_id='mimetic-design-338620',if_exists='append')
         except:
             print(f'failed at %s %s' % (i,address))
             pass
