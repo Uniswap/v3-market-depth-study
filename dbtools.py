@@ -23,22 +23,20 @@ def getpricefromswap(address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8',decima
     df=df.set_index('block_number')
     return df
 
-
 def getpricefromdb(address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8'):
-    # gets price from db based on swap data
+    # gets price from db using pool address based on swap data
     project_id='mimetic-design-338620'
     poolstats=getpoolstats(address=address)
     q=f'''select *  FROM `mimetic-design-338620.uniswap.price`
      where address="{address}"
     '''
     df = pd.io.gbq.read_gbq(q, project_id=project_id, dialect='standard')
-    df['price']=list(map(lambda x: 10**(poolstats['decimals1']-poolstats['decimals0'])/(float(x)**2/(2**192)),df.sqrtPriceX96))
+    df['price']=list(map(lambda x: 10**int(poolstats['decimals1']-poolstats['decimals0'])/(float(x)**2/(2**192)),df.sqrtPriceX96))
     df['tick']=list(map(int,df.tick))
     df['date']=pd.to_datetime(df.block_timestamp)
     df=df.sort_values('block_number')
     df=df.set_index('block_number')
     return df
-
 
 def getpoolstats(address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8'):
     #' return token0, token1, decimals0, decimals1, tickspacing, feetier

@@ -16,7 +16,6 @@ DB_OUT='uniswap.marketdepth'
 pcts = [-.06, -.04, -.02, -.01, -.005, -.004, -.003, -.002, -.001, -.00075, -.00050, -.00025,
         .001, .00025, .00050, .00075, .002, .003, .004, .005, .01, .02, .04, .06]
 
-
 for i in tqdm(range(len(pools))):
     try:
         address=pools.iloc[i].exchange_contract_address
