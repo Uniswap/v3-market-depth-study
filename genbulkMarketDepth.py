@@ -17,9 +17,9 @@ pcts = [-.06, -.04, -.02, -.01, -.005, -.004, -.003, -.002, -.001, -.00075, -.00
         .001, .00025, .00050, .00075, .002, .003, .004, .005, .01, .02, .04, .06]
 
 for i in tqdm(range(len(pools))):
+    address=pools.iloc[i].exchange_contract_address
     if not(db.bigquery(f'select count(address) as ct from uniswap.marketdepth where address="%s"' % address).ct[0]):
         try:
-            address=pools.iloc[i].exchange_contract_address
             md=dpu2.pipeMarketDepth(address=address,pctchg=pcts,UseSubgraph=False)
             md['address']=address
             poolstats=db.getpoolstats(address)
