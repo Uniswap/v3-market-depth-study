@@ -1,6 +1,13 @@
 import pandas as pd
 from google.cloud import bigquery
 
+
+def bigquery(q):
+    # adhoc bigquery
+    project_id='mimetic-design-338620'
+    df = pd.io.gbq.read_gbq(q, project_id=project_id, dialect='standard')
+    return df
+
 def getpricefromswap(address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8',decimals0=6,decimals1=18):
     project_id='mimetic-design-338620'
     q=f'''with px as (SELECT block_timestamp,block_number,address, tick, sqrtPriceX96, row_number() over
