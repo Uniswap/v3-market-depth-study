@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     print('Market depth description:')
     print(md.describe())
-
+    md.to_csv('output/example_%s.csv' % address)
     print('Plots saved in output folder')
     # +2% market depth
     fig=md.loc[md.pct==.02].plot('date','marketdepth').get_figure()

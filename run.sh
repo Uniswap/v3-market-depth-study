@@ -9,8 +9,10 @@ curl https://storage.googleapis.com/uniswap-data/tickprice_0x8ad599c3a0ff1de0820
 gzip -d data/tickprice_0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8.csv.gz
 
 
-python example.py 0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8 1
+python3 example.py 0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8 1
 
 open output/marketdepthhistorical_example.png
 
 open output/marketdepthhistorical_example2.png
+
+open output/example_0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8.csv
