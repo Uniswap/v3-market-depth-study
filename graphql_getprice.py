@@ -45,6 +45,20 @@ def subgraph_pull(pool0x="0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8",block_numb
 
   return out
 
+def getprice_ts(poolid="0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8",bn=[]):
+    tmplist=list()
+    from tqdm import tqdm
+    for i in tqdm(range(len(bn))):
+        # print(i)
+        bi=bn[i]
+        ctick=subgraph_pull(poolid,bi)
+        ctick['bn']=bi
+        tmplist.append(ctick)
+    df=pd.DataFrame.from_dict(tmplist).iloc[1:]
+    df['tick']=df.tick.astype('int')
+    df['token0Price']=df.token0Price.astype('float')
+    df['token1Price']=df.token1Price.astype('float')
+    return df
 
 if __name__ == "__main__":
     import sys

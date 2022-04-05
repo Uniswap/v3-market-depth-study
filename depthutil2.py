@@ -288,7 +288,7 @@ def pipeMarketDepth2(filein = 'data/mintburnall_bigquery.csv',address='0x8ad599c
     dfmktdepth=pd.merge(dfmktdepth.reset_index(),blockdate,left_on='index',right_on='block_number').drop('index',axis=1)
     return dfmktdepth
 
-def pipeMarketDepth(filein = 'data/mintburnall_bigquery.csv',address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8',pctchg=[-.05, -.02, .02, .05], UseSubgraph=True):
+def pipeMarketDepth(filein = 'data/mintburnall_bigquery.csv',address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8',pctchg=[-.05, -.02, .02, .05], UseSubgraph=True, UsePriceFile=''):
     #' create market depth from mintburn file (from either dune or gcpbigquery) given address, pctchg
     #' queries either subgraph or gcpbigquery for historical pricees
     # filein = 'data/mintburnall_bigquery.csv';address='0x4bec87cb126de6c1f8b410e32d1f4ae472fdd83b';pctchg=[.02];UseSubgraph=False
@@ -321,12 +321,11 @@ def pipeMarketDepth(filein = 'data/mintburnall_bigquery.csv',address='0x8ad599c3
     bndate=df.loc[df.amount!=0].groupby('date').block_number.last()
 
     if UseSubgraph:
-        fileprice='tickprice_%s.csv' % address
-        if (not(os.path.exists(fileprice))):
-            print('getting prices:')
-            bndate.to_csv('tmp_bndate.csv')
-            os.system('python3.9 graphql_getprice.py %s %s' % (address,'tmp_bndate.csv'))
-        dfprice=pd.read_csv(fileprice)[['bn','token0Price','tick']].rename(columns={'bn':'block_number','token0Price':'price','tick':'currenttick'})
+        if len(UsePriceFile)>0:
+            dfprice=pd.read_csv(UsePriceFile)[['bn','token0Price','tick']].rename(columns={'bn':'block_number','token0Price':'price','tick':'currenttick'})
+        else:
+            import graphql_getprice as ggp
+            dfprice=ggp.getprice_ts(poolid=address,bn=bndate.values)[['bn','token0Price','tick']].rename(columns={'bn':'block_number','token0Price':'price','tick':'currenttick'})
     else:
         # use internal server (non-public)
         dfprice=dbtools.getpriceatblocknumber(address=address,block_numbers=bndate.values).rename(columns={'tick':'currenttick'})[['block_number','price','currenttick']]

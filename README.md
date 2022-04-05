@@ -8,10 +8,11 @@ Data requirement:
  - Coinpaprika API (optional): to get historical price externally
  - Kaiko API (optional): to obtain centralized exchange market depth
 
-
-
 Files:
  - depthutil.py  Functions used to construct liquidity distribution retrospectively and generate market depth at each historical date and level
  - depthutil2.py V2 version (more efficient) of constructing liquidity distribution and calculating market depth 
  - example.py Simple example of market depth calculation
  - genbulkMarketDepth.py for bulk calculation and upload to GCP
+
+To run example:
+   ./run.sh
