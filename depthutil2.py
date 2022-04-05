@@ -23,7 +23,6 @@ def _genLiqRange(df,ts=60,getblocks=[]):
     tu=list(map(int,(dft.tickUpper.values-tmin)/ts))
     tamount=dft.amount.values
 
-
     ll=np.zeros(Nt)
     # store historical liquidity states at defined block numbers
     if (len(getblocks)==0):
@@ -42,10 +41,14 @@ def _genLiqRange(df,ts=60,getblocks=[]):
     ll[tl[i]:tu[i]]=ll[tl[i]:tu[i]]+tamount[i]
     if(blockN[i] in getblocks):
         lm[:,j]=ll.copy()
+        j+=1
 
-    if(j!=(len(getblocks)-1)):
+    if(j!=(len(getblocks))):
         print('error: cannot find all blocks')
         print(j)
+        # import pdb; pdb.set_trace()
+
+
     dfout=pd.DataFrame(ll,index=range(tmin,tmax,ts))
     dfhist=pd.DataFrame(lm.transpose(),columns=range(tmin,tmax,ts),index=getblocks)
     # state at every single block
@@ -56,10 +59,12 @@ def _genLiqRange(df,ts=60,getblocks=[]):
 #     dfout=pd.DataFrame(lm.transpose(),columns=range(tmin,tmax,ts),index=dft.block_number)
     return dfout,dfhist
 
-def genLiqRange(df,ts=60):
-    # wrapper around _genliqrange2
+def genLiqRange(df,ts=60, atblocks=[]):
+    # wrapper around _genliqrange2, daily eod by default
+    if len(atblocks)==0:
+        atblocks=df.loc[df.amount!=0].groupby('date').block_number.last().values
     df=df.sort_values('block_number')
-    _,dfh = _genLiqRange(df,ts=ts,getblocks=df.loc[df.amount!=0].groupby('date').block_number.last().values)
+    _,dfh = _genLiqRange(df,ts=ts,getblocks=atblocks)
     tmp=pd.merge(dfh.reset_index(),df.loc[:,['block_number','block_timestamp']].drop_duplicates('block_number'),how='left',left_on='index',right_on='block_number')
     dfout=pd.DataFrame(tmp.drop(columns='index').set_index(['block_number','block_timestamp']).stack()).reset_index().rename(columns={'level_2':'tickLower',0:'amount'})
     return dfout
@@ -201,7 +206,7 @@ def genLiqRangeXNumeraire(dfrgn, tickspacing=60,decimals0=6,decimals1=18,pricemo
     dfrgn["liqX"] = 1 * dfrgn.x + dfrgn.price * dfrgn.y
     return dfrgn
 
-def pipeMarketDepth(filein = 'data/mintburnall_bigquery.csv',address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8',pctchg=[-.05, -.02, .02, .05], UseSubgraph=True):
+def pipeMarketDepth2(filein = 'data/mintburnall_bigquery.csv',address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8',pctchg=[-.05, -.02, .02, .05], UseSubgraph=True, CalcAtPriceChg=True):
     #' create market depth from mintburn file (from either dune or gcpbigquery) given address, pctchg
     #' queries either subgraph or gcpbigquery for historical pricees
     if UseSubgraph:
@@ -241,28 +246,108 @@ def pipeMarketDepth(filein = 'data/mintburnall_bigquery.csv',address='0x8ad599c3
         dfprice=pd.read_csv(fileprice)[['bn','token0Price','tick']].rename(columns={'bn':'block_number','token0Price':'price','tick':'currenttick'})
     else:
         # use internal server (non-public)
-        dfprice=dbtools.getpriceatblocknumber(address=address,block_numbers=bndate.values).rename(columns={'tick':'currenttick'})[['block_number','price','currenttick']]
-
+        if (CalcAtPriceChg):
+            dfprice=dbtools.getpricedailyfromdb(address).rename(columns={'tick':'currenttick'}).reset_index()
+        else:
+            dfprice=dbtools.getpriceatblocknumber(address=address,block_numbers=bndate.values).rename(columns={'tick':'currenttick'})[['block_number','price','currenttick']]
 
     # reduce size of range if 1tick spacing
     if(ts==1):
         df=LimitTickRange(df,dfprice,nstd=5).copy()
 
-    dfl = genLiqRange(df,ts=ts)
+    # get appropriate block number for mint burn that are latest at each price observation (daily freq by default)
+    mb_block_numbers=df.drop_duplicates('block_number')[['block_number']].assign(block_number_mintburn=lambda x: x.block_number)
+    dfprice2=pd.merge_asof(dfprice,mb_block_numbers,on='block_number',suffixes=('','_mb')).dropna()
+
+    dfl = genLiqRange(df,ts=ts, atblocks=dfprice2.block_number_mintburn.unique())
     # reduce bounds again to simplify market depth calculations
     dfl=LimitTickRange(dfl,dfprice,nstd=5).copy()
 
     dfl['block_timestamp']=pd.to_datetime(dfl.block_timestamp)
     dfl['date']=dfl.block_timestamp.dt.date
 
-    dfm=pd.merge(dfl,dfprice,on='block_number',how='left').dropna()
-
+    if (CalcAtPriceChg and not(UseSubgraph)):
+        dfm=pd.merge(dfprice2,dfl,left_on='block_number_mintburn',right_on='block_number',how='left',suffixes=('','_mb'))
+        # blocks that are in daily mb but not in price
+        # mb_block_numbers=df.loc[df.block_number.isin(bndate)].drop_duplicates('block_number')[['block_number']].assign(block_number_mintburn=lambda x: x.block_number)
+        # remain=mb_block_numbers.loc[~mb_block_numbers.block_number_mintburn.isin(dfprice2.block_number_mintburn.values)]
+        # addition_from_mb=pd.merge_asof(remain,dfprice,on='block_number')[['block_number', 'date', 'block_timestamp', 'currenttick', 'price','block_number_mintburn']]
+        # dfprice3=pd.concat([dfprice2,addition_from_mb],ignore_index=True,verify_integrity=True).sort_values('block_number').dropna()
+        # dfm2=pd.merge(dfprice3,dfl,left_on='block_number_mintburn',right_on='block_number',how='left',suffixes=('','_mb')).dropna()
+    else:
+        dfm=pd.merge(dfl,dfprice,on='block_number',how='left').dropna()
     tmplist=list()
-    for pc in tqdm(pctchg):
+    for pc in pctchg:
         tmp=genMarketDepth(dfm,delta=pc,ts=ts, plusminus=False,decimals0=decimals0,logdelta=False)
         tmp['pct']=pc
         tmplist.append(tmp)
+    dfmktdepth=pd.concat(tmplist)
 
+    blockdate=dfm.loc[:,['date','block_number']].drop_duplicates()
+    blockdate['date']=pd.to_datetime(blockdate.date)
+    dfmktdepth=pd.merge(dfmktdepth.reset_index(),blockdate,left_on='index',right_on='block_number').drop('index',axis=1)
+    return dfmktdepth
+
+def pipeMarketDepth(filein = 'data/mintburnall_bigquery.csv',address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8',pctchg=[-.05, -.02, .02, .05], UseSubgraph=True):
+    #' create market depth from mintburn file (from either dune or gcpbigquery) given address, pctchg
+    #' queries either subgraph or gcpbigquery for historical pricees
+    # filein = 'data/mintburnall_bigquery.csv';address='0x4bec87cb126de6c1f8b410e32d1f4ae472fdd83b';pctchg=[.02];UseSubgraph=False
+    if UseSubgraph:
+        poolstats=graphql_getpoolstat.subgraph_getpoolstats(address)
+        decimals0=int(poolstats['token0']['decimals'])
+        decimals1=int(poolstats['token1']['decimals'])
+        symbol0=poolstats['token0']['symbol']
+        symbol1=poolstats['token1']['symbol']
+        feeTier=int(poolstats['feeTier'])
+        ts=feetier2tickspacing(feeTier)
+    else:
+        # use internal server (non-public)
+        import dbtools
+        poolstats=dbtools.getpoolstats(address)
+        decimals0=int(poolstats['decimals0'])
+        decimals1=int(poolstats['decimals1'])
+        symbol0=poolstats['token0symbol']
+        symbol1=poolstats['token1symbol']
+        feeTier=int(poolstats['fee'])
+        ts=int(poolstats['tickSpacing'])
+    print(symbol0,decimals0, symbol1, decimals1,feeTier,ts)
+
+    df = pd.read_csv(filein, dtype={'amount': float, 'amount0': float, 'amount1': float})
+    df = df.loc[df.address == address]
+    df = df.loc[df.amount!=0]
+    df["date"] = pd.to_datetime(df.block_timestamp).dt.date
+    df=df.sort_values('block_number')
+
+    bndate=df.loc[df.amount!=0].groupby('date').block_number.last()
+
+    if UseSubgraph:
+        fileprice='tickprice_%s.csv' % address
+        if (not(os.path.exists(fileprice))):
+            print('getting prices:')
+            bndate.to_csv('tmp_bndate.csv')
+            os.system('python3.9 graphql_getprice.py %s %s' % (address,'tmp_bndate.csv'))
+        dfprice=pd.read_csv(fileprice)[['bn','token0Price','tick']].rename(columns={'bn':'block_number','token0Price':'price','tick':'currenttick'})
+    else:
+        # use internal server (non-public)
+        dfprice=dbtools.getpriceatblocknumber(address=address,block_numbers=bndate.values).rename(columns={'tick':'currenttick'})[['block_number','price','currenttick']]
+
+    # reduce size of range if 1tick spacing
+    if(ts==1):
+        df=LimitTickRange(df,dfprice,nstd=5).copy()
+    dfl = genLiqRange(df,ts=ts, atblocks=[])
+    # reduce bounds again to simplify market depth calculations
+    dfl=LimitTickRange(dfl,dfprice,nstd=5).copy()
+
+    dfl['block_timestamp']=pd.to_datetime(dfl.block_timestamp)
+    dfl['date']=dfl.block_timestamp.dt.date
+
+    dfm=pd.merge(dfl,dfprice,on='block_number',how='left',suffixes=('','_price')).dropna()
+
+    tmplist=list()
+    for pc in pctchg:
+        tmp=genMarketDepth(dfm,delta=pc,ts=ts, plusminus=False,decimals0=decimals0,logdelta=False)
+        tmp['pct']=pc
+        tmplist.append(tmp)
     dfmktdepth=pd.concat(tmplist)
 
     blockdate=dfm.loc[:,['date','block_number']].drop_duplicates()

@@ -16,7 +16,7 @@ def getpricefromswap(address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8',decima
     )
     select block_timestamp,block_number,tick, sqrtPriceX96 from px where rn=1;'''
     df = pd.io.gbq.read_gbq(q, project_id=project_id, dialect='standard')
-    df['price']=list(map(lambda x: 10**(decimals1-decimals0)/(float(x)**2/(2**192)),df.sqrtPriceX96))
+    df['price']=list(map(lambda x: 10**int(decimals1-decimals0)/(float(x)**2/(2**192)),df.sqrtPriceX96))
     df['tick']=list(map(int,df.tick))
     df['date']=pd.to_datetime(df.block_timestamp)
     df=df.sort_values('block_number')
@@ -38,6 +38,24 @@ def getpricefromdb(address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8'):
     df=df.set_index('block_number')
     return df
 
+
+def getpricedailyfromdb(address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8'):
+    # gets price from db using pool address based on swap data
+    project_id='mimetic-design-338620'
+    poolstats=getpoolstats(address=address)
+    q=f'''select *  FROM `mimetic-design-338620.uniswap.price_daily`
+     where address="{address}"
+    '''
+    df = pd.io.gbq.read_gbq(q, project_id=project_id, dialect='standard')
+    df['price']=list(map(lambda x: 10**int(poolstats['decimals1']-poolstats['decimals0'])/(float(x)**2/(2**192)),df.sqrtPriceX96))
+    df['tick']=list(map(int,df.tick))
+    # df['tick']=list(map(int,df.tick))
+    df['date']=pd.to_datetime(df.block_timestamp).dt.date
+    df=df.sort_values('block_number')
+    df=df.set_index('block_number')
+    df=df.drop(['rn','address','sqrtPriceX96'],axis=1)
+    return df
+
 def getpoolstats(address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8'):
     #' return token0, token1, decimals0, decimals1, tickspacing, feetier
     #' call bigquery: `bigquery-public-data.crypto_ethereum.tokens` join with `mimetic-design-338620.uniswap.V3Factory_PoolCreated`
@@ -49,7 +67,20 @@ def getpoolstats(address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8'):
      where pool="{address}"
     '''
     df = pd.io.gbq.read_gbq(q, project_id=project_id, dialect='standard')
-    return dict(df.iloc[0])
+    # handle missing data from DB
+    if (type(df.decimals0.iloc[0])==pd._libs.missing.NAType or type(df.decimals1.iloc[0])==pd._libs.missing.NAType):
+        import graphql_getpoolstat
+        poolstats=graphql_getpoolstat.subgraph_getpoolstats(address)
+        dictout=dict()
+        dictout['decimals0']=int(poolstats['token0']['decimals'])
+        dictout['decimals1']=int(poolstats['token1']['decimals'])
+        dictout['token0symbol']=poolstats['token0']['symbol']
+        dictout['token1symbol']=poolstats['token1']['symbol']
+        dictout['fee']=int(poolstats['feeTier'])
+        dictout['tickSpacing']=int(df.tickSpacing.iloc[0])
+    else:
+        dictout=dict(df.iloc[0])
+    return dictout
 
 
 def getpriceatblocknumber(address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8', block_numbers=[12602988, 12839866, 12902514]):

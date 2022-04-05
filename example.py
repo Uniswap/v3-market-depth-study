@@ -14,7 +14,7 @@ address='0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8'
 
 loadmintburns=0
 if loadmintburns:
-    #' Load mint burn history from internal server or run dune mintburn_dune.sql
+    #' Load mint burn history from GCP server by running bigquery_mintburn.sql or run dune mintburn_dune.sql and download data
     from dbtools import *
     df=bigquery("select * from uniswap.MintBurn where amount!=0")
     df.to_csv('data/mintburnall_bigquery.csv')
@@ -27,3 +27,5 @@ md.loc[md.pct==.02].plot('date','marketdepth')
 
 # -2% market depth
 md.groupby('date').sum().marketdepth.plot()
+
+#%%
